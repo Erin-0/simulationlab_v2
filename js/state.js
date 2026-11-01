@@ -48,7 +48,7 @@ export const LPRESETS = {
     bright:   { label: 'Lumineux',   expo: 1.22, hemi: 1.20, spot: 118, panel: 1.28, fill: 1.40, desk: 1.35, lamp: 2.75, silk: .74 },
     daylight: { label: 'Plein jour', expo: 1.34, hemi: 1.50, spot: 138, panel: 1.55, fill: 1.95, desk: 1.70, lamp: 3.10, silk: .52 }
 };
-xport const L = { preset: 'bright', slider: 0.85 };   // slider : 0,7 … 1,5
+export const L = { preset: 'bright', slider: 0.85 };   // slider : 0,7 … 1,5
 export const allTextures = [];         // toutes les textures procédurales (anisotropie)
 
 /* ---------- état de la simulation ---------- */
