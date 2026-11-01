@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaboPhysique 3D — TP 1 à 3 : Résistances · Filtres · Théorèmes (Solo)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Caveat:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- KaTeX for Official LaTeX Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="noselect">
+
+    <!-- شاشة منع الهواتف -->
+    <div id="mobile-block">
+        <div class="glass">
+            <i data-lucide="monitor-off" class="ic-block"></i>
+            <h2>Version Ordinateur Requise</h2>
+            <p>Ce laboratoire 3D nécessite un écran large, une souris et un clavier.<br>Veuillez ouvrir ce lien depuis
+                un PC.</p>
+        </div>
+    </div>
+
+    <div id="vignette"></div>
+    <div id="zoomfx"></div>
+    <div id="hurtfx"></div>
+    <div id="app"></div>
+
+    <!-- Écran d'accueil (mode solo) -->
+    <div id="start">
+        <div class="grid-bg"></div>
+        <div class="glass startcard clean-mode">
+            <div class="badge">TP Virtuel · Physique · Solo (sans personnage ni serveur)</div>
+            <h1 class="title-grad">Laboratoire de Physique 3D</h1>
+            <p class="sub">
+                Trois TP du fascicule « Circuits Électriques » : <b>TP 1</b> Mesure de résistances ·
+                <b>TP 2</b> Réponse fréquentielle · <b>TP 3</b> Théorèmes électrocinétiques.<br>
+                Déplacez les appareils (appui long), tournez-les (molette) et remplissez vos relevés au stylo.
+            </p>
+
+            <div class="startgrid">
+                <div class="glass-soft p3"><i data-lucide="move" class="ic ic-cyan"></i>
+                    <p class="mini">Se déplacer<br><span class="mono dim">ZQSD / WASD · souris</span></p>
+                </div>
+                <div class="glass-soft p3"><i data-lucide="plug-zap" class="ic ic-amber"></i>
+                    <p class="mini">Câbler<br><span class="mono dim">clic borne → borne</span></p>
+                </div>
+                <div class="glass-soft p3"><i data-lucide="file-text" class="ic ic-green"></i>
+                    <p class="mini">Feuille de relevés<br><span class="mono dim">clic sur le papier</span></p>
+                </div>
+                <div class="glass-soft p3"><i data-lucide="hand" class="ic ic-cyan"></i>
+                    <p class="mini">Déplacer un appareil<br><span class="mono dim">appui long puis viser</span></p>
+                </div>
+            </div>
+
+            <button id="btnStart" class="btn btn-accent big">
+                <i data-lucide="play"></i> Entrer dans le laboratoire
+            </button>
+            <p class="tip">
+                <span class="mono hl">E</span> loupe · <span class="mono hl">molette</span> tourner l'objet saisi ·
+                <span class="mono hl">clic droit</span> rotation rapide ·
+                <span class="mono hl">molette sur un bouton</span> réglage fin
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================== HUD ==================== -->
+    <div class="hud tl">
+        <!-- DANS index.html : Remplacer le bloc panel-brand -->
+        <div class="glass interactive panel-brand">
+            <div class="brandrow">
+                <div class="logo"><i data-lucide="flask-conical"></i></div>
+                <div>
+                    <p class="brand">LaboPhysique<span class="cy">3D</span></p>
+                    <p id="brandSub" class="brandsub mono">TP 1 · MESURE DE RÉSISTANCES</p>
+                </div>
+            </div>
+
+            <!-- Sélecteur principal de TP -->
+            <div class="tp-switcher mt2">
+                <button type="button" id="btnTP1" class="tp-btn active">
+                    <i data-lucide="zap" class="ic-sm"></i> TP 1 : Ohm & Pont
+                </button>
+                <button type="button" id="btnTP2" class="tp-btn">
+                    <i data-lucide="activity" class="ic-sm"></i> TP 2 : Filtres
+                </button>
+                <button type="button" id="btnTP3" class="tp-btn">
+                    <i data-lucide="git-fork" class="ic-sm"></i> TP 3 : Théorèmes
+                </button>
+            </div>
+
+            <!-- Onglets TP 1 -->
+            <div id="tabsTP1" class="tabs">
+                <div id="tabA" class="tab active grow tc">A · Loi d'Ohm</div>
+                <div id="tabB" class="tab grow tc">B · Wheatstone</div>
+            </div>
+
+            <!-- Onglets TP 2 (masqués par défaut) -->
+            <div id="tabsTP2" class="tabs hidden">
+                <div id="tabRC" class="tab active grow tc" title="Filtre Passe-bas RC">1 · Passe-bas</div>
+                <div id="tabCR" class="tab grow tc" title="Filtre Passe-haut CR">2 · Passe-haut</div>
+                <div id="tabBand" class="tab grow tc" title="Cascade RC-CR">3 · Passe-bande</div>
+            </div>
+
+            <!-- Onglets TP 3 : les cinq manipulations du fascicule (p. 7 à 9) -->
+            <div id="tabsTP3" class="tabs hidden wrap">
+                <div id="tabT3_1" class="tab grow tc active-t3" title="Manipulation 1 — mesures initiales V₀ et I₀">1 ·
+                    V₀, I₀</div>
+                <div id="tabT3_2" class="tab grow tc" title="Manipulation 2 — théorème de Millman">2 · Millman</div>
+                <div id="tabT3_3" class="tab grow tc" title="Manipulation 3 — théorème de superposition">3 · Superpos.
+                </div>
+                <div id="tabT3_4" class="tab grow tc" title="Manipulation 4 — théorème de Thévenin">4 · Thévenin</div>
+                <div id="tabT3_5" class="tab grow tc" title="Manipulation 5 — théorème de Norton">5 · Norton</div>
+            </div>
+        </div>
+
+        <div class="glass interactive panel-missions">
+            <p class="sechead"><i data-lucide="list-checks"></i> Objectifs du TP</p>
+            <div id="missionList" class="mt2"></div>
+        </div>
+    </div>
+
+    <div class="hud tr">
+        <div class="chiprow">
+            <div class="chip glass"><span id="chipGenDot" class="dotline led-off"></span><span id="chipGen"
+                    class="mono">GEN · OFF</span></div>
+            <div class="chip glass"><i data-lucide="zap" class="ic-sm ic-amber"></i><span id="chipU" class="mono">U
+                    réglée =
+                    0,0 V</span></div>
+        </div>
+        <div id="chipRowA" class="chiprow">
+            <div class="chip glass"><i data-lucide="gauge" class="ic-sm ic-cyan"></i><span id="chipMontage"
+                    class="mono">Montage : —</span></div>
+        </div>
+        <div id="chipRowB" class="chiprow hidden">
+            <div class="chip glass"><span class="mono lbl-am">Rv</span><span id="chipRv" class="mono">0 Ω</span></div>
+            <div class="chip glass"><span class="mono lbl-gr">Vg</span><span id="chipVg" class="mono">→ aiguille</span>
+            </div>
+            <div class="chip glass"><span class="dotline" id="chipBalDot"></span><span id="chipBal"
+                    class="mono">Équilibre</span></div>
+        </div>
+        <!-- DANS index.html : Sous #chipRowB dans la zone .hud .tr -->
+        <div id="chipRowTP2" class="chiprow hidden">
+            <div class="chip glass">
+                <span class="mono lbl-am">GBF</span>
+                <span id="chipGbfFreq" class="mono">1,00 kHz</span>
+            </div>
+            <div class="chip glass">
+                <span class="mono lbl-gr">Ue</span>
+                <span id="chipUe" class="mono">à mesurer</span>
+            </div>
+            <div class="chip glass">
+                <span class="mono cy">G</span>
+                <span id="chipGain" class="mono">à calculer</span>
+            </div>
+        </div>
+        <div id="chipRowTP3" class="chiprow hidden">
+            <div class="chip glass">
+                <span id="chipE1Dot" class="dotline led-off"></span><span id="chipE1" class="mono">E1 · OFF</span>
+            </div>
+            <div class="chip glass">
+                <span id="chipE2Dot" class="dotline led-off"></span><span id="chipE2" class="mono">E2 · OFF</span>
+            </div>
+            <div class="chip glass"><span class="mono lbl-am">Rh</span><span id="chipRheo" class="mono">0 Ω</span></div>
+            <div class="chip glass"><span class="mono lbl-gr">Cal V</span><span id="chipTp3V" class="mono">30 V</span>
+            </div>
+            <div class="chip glass"><span class="mono cy">Cal I</span><span id="chipTp3I" class="mono">300 mA</span>
+            </div>
+        </div>
+        <div class="chiprow">
+            <div class="chip glass"><i data-lucide="mouse-pointer-2" class="ic-sm ic-cyan"></i><span id="chipTarget"
+                    class="mono">—</span></div>
+        </div>
+    </div>
+
+    <div class="hud br">
+        <div class="glass interactive qualitybar">
+            <span class="qhead"><i data-lucide="settings-2" class="ic-sm"></i> Qualité</span>
+            <button class="qbtn" data-q="low">Basse</button>
+            <button class="qbtn sel" data-q="med">Moyenne</button>
+            <button class="qbtn" data-q="high">Haute</button>
+            <button id="btnLight" class="lightbtn" title="Éclairage de la salle" aria-label="Éclairage">
+                <i data-lucide="sun"></i>
+            </button>
+            <span id="fps" class="mono fps">— fps</span>
+        </div>
+        <div id="lightPop" class="glass lightpop hidden">
+            <p class="lphead"><i data-lucide="sun" class="ic-sm ic-amber"></i> Éclairage de la salle</p>
+            <div class="lgroup">
+                <button class="lbtn" data-l="dim">Veillée</button>
+                <button class="lbtn" data-l="lab">Atelier</button>
+                <button class="lbtn sel" data-l="bright">Lumineux</button>
+                <button class="lbtn" data-l="daylight">Plein jour</button>
+            </div>
+            <div class="lslider">
+                <i data-lucide="contrast" class="ic-sm"></i>
+                <input id="lightRange" type="range" min="70" max="150" step="5" value="85">
+                <span id="lightPct" class="mono">85 %</span>
+            </div>
+        </div>
+        <!-- ✅ Keep the id so main.js doesn't crash, just hide it -->
+        <div id="palette" style="display:none"></div>
+    </div>
+
+    <div id="crosshair" class="off">
+        <div class="ring"></div>
+        <div class="dot"></div>
+        <svg id="grabIcon" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+            <g fill="none" stroke="#67e8f9" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3.2v3.4M12 17.4v3.4M3.2 12h3.4M17.4 12h3.4" />
+                <path d="M6.4 6.4 8.8 8.8M17.6 6.4 15.2 8.8M6.4 17.6 8.8 15.2M17.6 17.6 15.2 15.2" />
+                <circle cx="12" cy="12" r="2.3" />
+            </g>
+        </svg>
+    </div>
+    <div id="tooltip"><span class="glass-soft tipbubble"></span></div>
+    <div id="toasts"></div>
+
+    <div id="hint" class="hud bc">
+        <div class="glass hintbox"><i data-lucide="mouse-pointer-click" class="ic-cyan"></i> Cliquez pour reprendre le
+            contrôle de la vue</div>
+    </div>
+
+    <!-- ROBOT TUTEUR « OHMIE » -->
+    <div id="tutorFab" class="hud" title="Ohmie, le robot tuteur (T)"><span class="glass-soft fabbit">🤖 <i>T</i></span>
+    </div>
+    <div id="tutorDock" class="hud hiddenx">
+        <div class="glass dockwrap">
+            <div class="dockhead">
+                <span class="dh-name">🤖 Ohmie <span class="dh-sub">tuteur IA · labo</span></span>
+                <span class="dh-acts">
+                    <button id="tdExpand" class="icobtn" title="Conversation complète">⤢</button>
+                    <button id="tdClose" class="icobtn" title="Fermer (T)">✕</button>
+                </span>
+            </div>
+            <div id="tdBody" class="dockbody"></div>
+            <div class="dockfoot">
+                <input id="tdInput" maxlength="600" autocomplete="off" spellcheck="false"
+                    placeholder="Pose une question sur le TP…">
+                <button id="tdVoice" class="icobtn" title="Réponses vocales">🔊</button>
+                <button id="tdSend" class="sendbtn" title="Envoyer (Entrée)">➤</button>
+            </div>
+            <div id="tdStats" class="dockstats"></div>
+        </div>
+    </div>
+    <div id="tutorModal" class="hiddenx modal">
+        <div class="tutorwin glass">
+            <div class="tw-head">🤖 Ohmie — conversation complète
+                <button id="tmClose" class="icobtn">✕</button>
+            </div>
+            <div id="tmBody" class="tw-body"></div>
+        </div>
+    </div>
+
+    <!-- FEUILLE DE RELEVÉS -->
+    <div id="cahier" class="hiddenx modal">
+        <div class="sheet">
+            <div class="paperhead">
+                <div>
+                    <h2 class="handtitle">Relevés de laboratoire</h2>
+                    <p id="paperSub" class="handsub">TP 1 · Mesure de résistances — à remplir au stylo, case par case.
+                    </p>
+                </div>
+                <button id="btnCloseCahier" class="penbtn" title="Fermer la feuille"><i data-lucide="x"></i></button>
+            </div>
+
+            <div class="ident">
+                <div class="field"><label>Nom</label><input id="fName" class="handin" maxlength="24"
+                        placeholder="………………"></div>
+                <div class="field"><label>Date</label><input id="fDate" class="handin" maxlength="16"
+                        placeholder="…/…/…"></div>
+                <div class="field"><label>Poste</label><input id="fPoste" class="handin" maxlength="12"
+                        placeholder="n° …"></div>
+            </div>
+
+            <div id="liveLine" class="livediv">
+                <span class="livetag">Lecture instantanée des appareils</span>
+                <span id="liveVals" class="handvals"></span>
+            </div>
+
+            <!-- UN SEUL tableau : son en-tête est rempli par js/hud.js selon le TP
+                 actif. (La duplication précédente faisait tomber les relevés du TP 2
+                 sous l'en-tête du TP 1 : identifiants cahierBody / cahierEmpty en
+                 double, donc invisibles pour getElementById.) -->
+            <div class="tablewrap">
+                <table class="paper-table">
+                    <thead id="cahierHead"></thead>
+                    <tbody id="cahierBody"></tbody>
+                </table>
+                <div id="cahierEmpty" class="empty hand">Feuille vierge : ajoutez une ligne, puis remplissez-la au
+                    stylo.</div>
+            </div>
+
+            <!-- SECTION DIAGRAMME DE BODE TP 2 (visible uniquement sur TP 2) -->
+            <div id="bodeSection" class="bodesection hidden">
+                <div class="bodehead">
+                    <span class="handbode-title">Diagramme de Bode — Papier semi-logarithmique</span>
+                    <div class="bode-legends">
+                        <span class="leg-item"><span class="leg-dot asymp"></span> Asymptotes</span>
+                        <span class="leg-item"><span class="leg-dot theo"></span> Courbe théorique</span>
+                        <span class="leg-item"><span class="leg-dot exp"></span> Points expérimentaux (×)</span>
+                    </div>
+                </div>
+                <div class="bode-canvas-wrap">
+                    <canvas id="bodeCanvas" width="840" height="340"></canvas>
+                </div>
+                <div class="formule-row hand">
+                    <label for="inpXFormule">Expression de <i>x</i> dans la formule :</label>
+                    <input id="inpXFormule" class="handin" placeholder="x = f / fc" style="min-width: 220px;">
+                    <span id="fcHint" class="mono dim" style="font-size: 13px; margin-left: auto;"></span>
+                </div>
+            </div>
+
+            <!-- AIDE-MÉMOIRE TP 3 : formules et incertitudes du fascicule (p. 3, 7 à 9) -->
+            <div id="tp3Section" class="bodesection hidden">
+                <div class="bodehead">
+                    <span class="handbode-title">Aide-mémoire — Théorèmes électrocinétiques</span>
+                    <span class="leg-item"><span class="leg-dot theo"></span> Formules du fascicule</span>
+                </div>
+                <div class="formula-grid hand">
+                    <div class="fcard">
+                        <b>Données</b>
+                        <p>E₁ = 12 V · E₂ = 6 V<br>R₁ = 290 Ω · R₂ = 180 Ω · R = 150 Ω</p>
+                        <p class="dim">ΔE/E = 0,03 · ΔR/R = 0,05</p>
+                    </div>
+                    <div class="fcard">
+                        <b>Millman</b>
+                        <p>V<sub>M</sub> = Σ(Eₖ·Gₖ) / ΣGₖ<br>avec Gₖ = 1/Rₖ</p>
+                        <p class="dim">I<sub>R</sub> = V<sub>M</sub> / R</p>
+                    </div>
+                    <div class="fcard">
+                        <b>Superposition</b>
+                        <p>I<sub>total</sub> = I₁ + I₂</p>
+                        <p class="dim">un seul générateur à la fois,<br>l'autre remplacé par un fil</p>
+                    </div>
+                    <div class="fcard">
+                        <b>Thévenin</b>
+                        <p>E<sub>Th</sub> = V₀ (tension à vide)<br>R<sub>Th</sub> = V₀ / I₀</p>
+                        <p class="dim">I<sub>Th</sub> = E<sub>Th</sub> / (R<sub>Th</sub> + R)</p>
+                    </div>
+                    <div class="fcard">
+                        <b>Norton</b>
+                        <p>I<sub>No</sub> = I₀ (courant de c.c.)<br>R<sub>No</sub> = R<sub>Th</sub></p>
+                        <p class="dim">I dans R = I<sub>No</sub>·R<sub>No</sub> / (R<sub>No</sub> + R)</p>
+                    </div>
+                    <div class="fcard">
+                        <b>Incertitudes</b>
+                        <p>Δg = |A|·Δx + |B|·Δy + |C|·Δz</p>
+                        <p class="dim">coefficients tirés de la dérivée<br>logarithmique de g</p>
+                    </div>
+                </div>
+                <div class="formule-row hand">
+                    <label for="inpRthCalc">Vérifier mon calcul R<sub>Th</sub> = V₀ / I₀ :</label>
+                    <input id="inpRthCalc" class="handin" placeholder="ex. 111" style="min-width: 120px;">
+                    <button id="btnCheckRth" class="btn small">Contrôler</button>
+                    <span id="rthVerdict" class="mono dim" style="font-size: 13px; margin-left: auto;"></span>
+                </div>
+                <div class="formule-row hand">
+                    <label for="inpIncCalc">Vérifier mon incertitude ΔV₀ (V), propagée depuis ΔE/E = 0,03 et
+                        ΔR/R = 0,05 :</label>
+                    <input id="inpIncCalc" class="handin" placeholder="ex. 0,28" style="min-width: 120px;">
+                    <button id="btnCheckInc" class="btn small">Contrôler</button>
+                    <span id="incVerdict" class="mono dim" style="font-size: 13px; margin-left: auto;"></span>
+                </div>
+            </div>
+
+            <div class="paperactions">
+                <button id="btnNewSheet" class="btn btn-pen"><i data-lucide="file-plus"></i> Nouvelle feuille</button>
+                <button id="btnPrevSheet" class="btn hidden" title="Feuille précédente"><i data-lucide="undo-2"></i>
+                    Précédente</button>
+                <button id="btnRow" class="btn btn-pen"><i data-lucide="plus"></i> Ajouter ligne</button>
+                <button id="btnAdd" class="btn btn-amber"><i data-lucide="pencil-line"></i> Recopier mesure</button>
+                <button id="btnCSV" class="btn"><i data-lucide="file-spreadsheet"></i> Exporter CSV</button>
+                <button id="btnClearTable" class="btn"><i data-lucide="trash-2"></i> Tout effacer</button>
+                <div class="spacer"></div>
+                <button id="btnResume" class="btn btn-accent"><i data-lucide="mouse-pointer-click"></i>
+                    Reprendre</button>
+            </div>
+            <p id="paperFoot" class="footnote hand">Rappel : R = U / I · Pont équilibré ⇒ Rx = (R2 / R1) · Rv</p>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+    <!-- Modal Calculatrice Scientifique -->
+    <div id="calcModal" class="hiddenx">
+        <div class="calc-header">
+            <span class="calc-title">
+                <i data-lucide="calculator"></i> Calculatrice Scientifique
+            </span>
+            <button id="calcClose" class="calc-close">✕</button>
+        </div>
+        <div class="calc-screen">
+            <div id="calcExpr" class="calc-expr">0</div>
+            <div class="calc-screen-bottom">
+                <span id="calcDegRad" class="calc-mode">DEG</span>
+                <div id="calcResult" class="calc-result"></div>
+            </div>
+        </div>
+        <div class="calc-pad">
+            <button class="cbtn fn" data-val="MODE">DEG/RAD</button>
+            <button class="cbtn fn" data-val="sin">sin</button>
+            <button class="cbtn fn" data-val="cos">cos</button>
+            <button class="cbtn fn" data-val="tan">tan</button>
+            <button class="cbtn fn" data-val="pi">π</button>
+
+            <button class="cbtn fn" data-val="sqrt">√x</button>
+            <button class="cbtn fn" data-val="sqr">x²</button>
+            <button class="cbtn fn" data-val="pow">xʸ</button>
+            <button class="cbtn fn" data-val="ln">ln</button>
+            <button class="cbtn fn" data-val="log">log</button>
+
+            <button class="cbtn fn" data-val="(">(</button>
+            <button class="cbtn fn" data-val=")">)</button>
+            <button class="cbtn fn" data-val="inv">1/x</button>
+            <button class="cbtn clear" data-val="C">C</button>
+            <button class="cbtn clear" data-val="DEL">⌫</button>
+
+            <button class="cbtn" data-val="7">7</button>
+            <button class="cbtn" data-val="8">8</button>
+            <button class="cbtn" data-val="9">9</button>
+            <button class="cbtn op" data-val="/">÷</button>
+            <button class="cbtn fn" data-val="e">e</button>
+
+            <button class="cbtn" data-val="4">4</button>
+            <button class="cbtn" data-val="5">5</button>
+            <button class="cbtn" data-val="6">6</button>
+            <button class="cbtn op" data-val="*">×</button>
+            <button class="cbtn fn" data-val="ANS">ANS</button>
+
+            <button class="cbtn" data-val="1">1</button>
+            <button class="cbtn" data-val="2">2</button>
+            <button class="cbtn" data-val="3">3</button>
+            <button class="cbtn op" data-val="-">−</button>
+            <button class="cbtn op" data-val="+">+</button>
+
+            <button class="cbtn" data-val="0">0</button>
+            <button class="cbtn" data-val=".">.</button>
+            <button class="cbtn fn" data-val="*10^">EXP</button>
+            <button class="cbtn eq" data-val="=">=</button>
+        </div>
+    </div>
+
+    <!-- Modal Réglages du Mur des Croquis (Activé par la console 3D) -->
+    <div id="wallModal" class="hiddenx modal">
+        <div class="glass wall-modal-card">
+            <div class="wall-modal-head">
+                <div class="wm-title">
+                    <i data-lucide="palette" class="ic-cyan"></i>
+                    <span>Studio des Croquis · Mur Collaboratif</span>
+                </div>
+                <button id="btnWallClose" class="calc-close">✕</button>
+            </div>
+
+            <div class="wall-modal-body">
+                <div class="wm-section">
+                    <span class="wm-label">Couleur de craie :</span>
+                    <div id="wmPalette" class="wm-palette"></div>
+                </div>
+
+                <div class="wm-section wm-row">
+                    <button id="wmBtnEraser" class="btn small">
+                        <i data-lucide="eraser"></i> Mode Gomme
+                    </button>
+                    <span id="wmToolStatus" class="wm-tool-status">Outil : Craie Blanche</span>
+                </div>
+
+                <div class="wm-section">
+                    <span class="wm-label">Votre Signature (Pseudo) :</span>
+                    <div class="wm-input-wrap">
+                        <i data-lucide="user" class="ic-sm dim"></i>
+                        <input id="wmInputPseudo" maxlength="20" placeholder="Votre nom ou pseudo..." class="wm-input"
+                            spellcheck="false">
+                    </div>
+                </div>
+
+                <div class="wm-sync-bar">
+                    <span class="wm-label">État du réseau :</span>
+                    <span id="wmSyncStatus" class="mono">● Connexion...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
