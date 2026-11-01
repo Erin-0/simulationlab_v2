@@ -42,31 +42,46 @@ const TTS_AUDIO_MAX_CHARS = 320;
  */
 function renderMarkdown(text) {
     if (!text) return '';
-    // 1. Échappement des caractères HTML sensibles
-    let out = String(text)
+
+    /* 1) EXTRAIRE les blocs LaTeX et les remplacer par un jeton
+          (sinon l'italique markdown transforme  R_1 C_1  en  R<em>1 C</em>1 ) */
+    const mathBlocks = [];
+    let out = String(text);
+
+    const protect = (regex, display) => {
+        out = out.replace(regex, (_, content) => {
+            mathBlocks.push({ display, content });
+            return `\u0000M${mathBlocks.length - 1}\u0000`;
+        });
+    };
+    protect(/\$\$([\s\S]*?)\$\$/g, true);       // $$…$$  (display)
+    protect(/\\\[([\s\S]*?)\\\]/g, true);       // \[…\]  (display)
+    protect(/\\\(([\s\S]*?)\\\)/g, false);      // \(…\)  (inline)
+    protect(/\$([^$\n]+?)\$/g, false);          // $…$    (inline)
+
+    /* 2) Échapper le HTML — uniquement sur le texte NON-math */
+    out = out
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-    // 2. Blocs de code ```code```
+    /* 3) Markdown normal */
     out = out.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-
-    // 3. Code inline `code`
     out = out.replace(/`([^`]+)`/g, '<code class="tutor-code">$1</code>');
-
-    // 4. Gras **texte** ou __texte__
     out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     out = out.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-
-    // 5. Italique *texte* ou _texte_
-    out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    out = out.replace(/_([^_]+)_/g, '<em>$1</em>');
-
-    // 6. Listes à puces : "- élément" ou "* élément"
+    /* [^*\n] et [^_\n] : l'italique ne traverse plus les sauts de ligne
+       (évite de manger du texte d'une puce à l'autre) */
+    out = out.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    out = out.replace(/_([^_\n]+)_/g, '<em>$1</em>');
     out = out.replace(/(?:^|\n)[ \t]*[-*][ \t]+(.*)/g, '<br>• $1');
-
-    // 7. Sauts de ligne simples
     out = out.replace(/\n/g, '<br>');
+
+    /* 4) RESTAURER les blocs LaTeX avec leurs délimiteurs pour KaTeX */
+    out = out.replace(/\u0000M(\d+)\u0000/g, (_, i) => {
+        const b = mathBlocks[+i];
+        return b.display ? `$$${b.content}$$` : `$${b.content}$`;
+    });
 
     return out;
 }
@@ -153,21 +168,33 @@ function clientValidate(msg) {
 function el(id) { return $(id); }
 
 function renderLatexInElement(element) {
-    if (window.renderMathInElement) {
-        try {
-            window.renderMathInElement(element, {
-                delimiters: [
-                    { left: '$$', right: '$$', display: true },
-                    { left: '\\[', right: '\\]', display: true },
-                    { left: '$', right: '$', display: false },
-                    { left: '\\(', right: '\\)', display: false }
-                ],
-                throwOnError: false
-            });
-        } catch (e) {
-            console.warn('KaTeX render warning:', e);
+    if (!element) return;
+
+    const attempt = (n = 0) => {
+        if (typeof window.renderMathInElement === 'function') {
+            try {
+                window.renderMathInElement(element, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '\\[', right: '\\]', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\(', right: '\\)', display: false }
+                    ],
+                    throwOnError: false,
+                    /* ne jamais essayer de rendre du LaTeX dans un bloc de code */
+                    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+                });
+            } catch (e) {
+                console.warn('[KaTeX] erreur de rendu :', e);
+            }
+        } else if (n < 20) {
+            /* CDN lent : on retente jusqu'à 20 fois (2 s) */
+            setTimeout(() => attempt(n + 1), 100);
+        } else {
+            console.warn('[KaTeX] auto-render non chargé — vérifiez le CDN dans index.html');
         }
-    }
+    };
+    attempt();
 }
 
 function pushLine(role, text, isErr = false) {
